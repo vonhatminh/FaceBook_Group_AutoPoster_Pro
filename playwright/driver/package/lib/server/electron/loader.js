@@ -7,8 +7,6 @@ var import_electron = require("electron");
 var disabledFeatures = [
   // See https://github.com/microsoft/playwright/issues/14047
   "AvoidUnnecessaryBeforeUnloadCheckSync",
-  // See https://github.com/microsoft/playwright/issues/38568
-  "BoundaryEventDispatchTracksNodeRemoval",
   "DestroyProfileOnBrowserClose",
   // See https://github.com/microsoft/playwright/pull/13854
   "DialMediaRouteProvider",
@@ -23,14 +21,22 @@ var disabledFeatures = [
   "PaintHolding",
   // See https://github.com/microsoft/playwright/issues/32230
   "ThirdPartyStoragePartitioning",
+  // Chromium 149 rejects re-applying the `origin` header on a redirect (as request interception
+  // does) with net::ERR_INVALID_ARGUMENT. See https://github.com/microsoft/playwright/issues/41690
+  "BlockOriginHeaderModificationOnRedirect",
+  // Chromium 155 aborts preflighted cross-origin redirects with net::ERR_ABORTED while
+  // Fetch interception is enabled. See https://github.com/microsoft/playwright/issues/43242
+  "AvoidCorsURLLoaderRestartOnRedirect",
   // See https://github.com/microsoft/playwright/issues/16126
   "Translate",
   // See https://issues.chromium.org/u/1/issues/435410220
   "AutoDeElevate",
-  // See https://github.com/microsoft/playwright/issues/37714
-  "RenderDocument",
   // Prevents downloading optimization hints on startup.
   "OptimizationHints",
+  // Prevents network time queries to clients2.google.com on startup.
+  "NetworkTimeServiceQuerying",
+  // Prevents AI Mode eligibility requests to www.google.com on startup.
+  "AimEnabled",
   // Disables forced sign-in in Edge.
   "msForceBrowserSignIn",
   // Disables updating the preferred version in LaunchServices preferences on mac.
@@ -63,6 +69,8 @@ var chromiumSwitches = (options) => [
   "--disable-popup-blocking",
   "--disable-prompt-on-repost",
   "--disable-renderer-backgrounding",
+  "--disable-updater-scheduler",
+  // Prevents Edge-specific updater from being launched when Edge is launched on mac.
   "--force-color-profile=srgb",
   "--metrics-recording-only",
   "--no-first-run",

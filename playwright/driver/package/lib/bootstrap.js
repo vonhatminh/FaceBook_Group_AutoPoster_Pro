@@ -1,5 +1,27 @@
 "use strict";
-const minimumMajorNodeVersion = 18;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var bootstrap_exports = {};
+__export(bootstrap_exports, {
+  processExit: () => processExit
+});
+module.exports = __toCommonJS(bootstrap_exports);
+const minimumMajorNodeVersion = 20;
 const currentNodeVersion = process.versions.node;
 const major = +currentNodeVersion.split(".")[0];
 if (major < minimumMajorNodeVersion) {
@@ -9,6 +31,41 @@ Playwright requires Node.js ${minimumMajorNodeVersion} or higher.
 Please update your version of Node.js.`
   );
   process.exit(1);
+}
+let stopProfiling = (callback) => callback();
+if (process.env.PW_PROFILE_DIR) {
+  const fs = require("fs");
+  const path = require("path");
+  const { Session } = require("inspector");
+  const profileDir = path.resolve(process.env.PW_PROFILE_DIR);
+  const script = process.argv[1] ? path.basename(process.argv[1], path.extname(process.argv[1])) : "node";
+  const command = /^[a-z][\w-]*$/i.test(process.argv[2] ?? "") ? process.argv[2] : void 0;
+  const profileName = [script, command, process.pid].filter(Boolean).join("-");
+  const session = new Session();
+  session.connect();
+  session.post("Profiler.enable");
+  session.post("Profiler.start");
+  stopProfiling = (callback) => {
+    stopProfiling = (callback2) => callback2();
+    session.post("Profiler.stop", (error, result) => {
+      try {
+        if (!error) {
+          fs.mkdirSync(profileDir, { recursive: true });
+          fs.writeFileSync(path.join(profileDir, profileName + ".cpuprofile"), JSON.stringify(result.profile));
+        }
+      } finally {
+        callback();
+      }
+    });
+  };
+  process.on("beforeExit", () => stopProfiling(() => {
+  }));
+}
+function processExit(code) {
+  stopProfiling(() => {
+    process.exit(code);
+  });
+  return void 0;
 }
 if (process.env.PW_INSTRUMENT_MODULES) {
   const Module = require("module");
@@ -86,3 +143,7 @@ if (process.env.PW_INSTRUMENT_MODULES) {
 ` + flatLines.join("\n") + "\n");
   });
 }
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  processExit
+});

@@ -28,6 +28,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var extension_exports = {};
 __export(extension_exports, {
+  findPlaywrightExtensionProfile: () => findPlaywrightExtensionProfile,
+  isExtensionInstalledInProfile: () => isExtensionInstalledInProfile,
   isPlaywrightExtensionInstalled: () => isPlaywrightExtensionInstalled,
   playwrightExtensionId: () => playwrightExtensionId,
   playwrightExtensionInstallUrl: () => playwrightExtensionInstallUrl
@@ -37,30 +39,60 @@ var import_fs = __toESM(require("fs"));
 var import_path = __toESM(require("path"));
 const playwrightExtensionId = "mmlmfjhmonkocbjadbfplnigmagldckm";
 const playwrightExtensionInstallUrl = `https://chromewebstore.google.com/detail/playwright-extension/${playwrightExtensionId}`;
-async function isPlaywrightExtensionInstalled(userDataDir) {
+async function findPlaywrightExtensionProfile(userDataDir) {
+  const profiles = await listProfileDirectories(userDataDir);
+  const lastUsed = await readLastUsedProfile(userDataDir);
+  const ordered = lastUsed && profiles.includes(lastUsed) ? [lastUsed, ...profiles.filter((profile) => profile !== lastUsed)] : profiles;
+  for (const profile of ordered) {
+    if (await isExtensionInstalledInProfile(import_path.default.join(userDataDir, profile)))
+      return profile;
+  }
+  return void 0;
+}
+async function listProfileDirectories(userDataDir) {
   let entries;
   try {
     entries = await import_fs.default.promises.readdir(userDataDir);
   } catch {
-    return false;
+    return [];
   }
-  for (const entry of entries) {
-    if (entry !== "Default" && !entry.startsWith("Profile "))
-      continue;
-    if (await isExtensionInstalledInProfile(import_path.default.join(userDataDir, entry)))
-      return true;
+  const profiles = entries.filter((entry) => entry === "Default" || /^Profile \d+$/.test(entry));
+  profiles.sort((a, b) => profileRank(a) - profileRank(b));
+  return profiles;
+}
+function profileRank(profile) {
+  return profile === "Default" ? -1 : parseInt(profile.slice("Profile ".length), 10);
+}
+async function readLastUsedProfile(userDataDir) {
+  try {
+    const localState = JSON.parse(await import_fs.default.promises.readFile(import_path.default.join(userDataDir, "Local State"), "utf-8"));
+    const lastUsed = localState?.profile?.last_used;
+    return typeof lastUsed === "string" ? lastUsed : void 0;
+  } catch {
+    return void 0;
   }
-  return false;
+}
+async function isPlaywrightExtensionInstalled(userDataDir) {
+  return await findPlaywrightExtensionProfile(userDataDir) !== void 0;
 }
 async function isExtensionInstalledInProfile(profileDir) {
   if (await pathExists(import_path.default.join(profileDir, "Extensions", playwrightExtensionId)))
     return true;
+  for (const fileName of ["Preferences", "Secure Preferences"]) {
+    if (await hasExtensionSettingsRecord(import_path.default.join(profileDir, fileName)))
+      return true;
+  }
+  return false;
+}
+async function hasExtensionSettingsRecord(prefsPath) {
+  let prefs;
   try {
-    const prefs = await import_fs.default.promises.readFile(import_path.default.join(profileDir, "Preferences"), "utf-8");
-    return prefs.includes(`"${playwrightExtensionId}"`);
+    prefs = JSON.parse(await import_fs.default.promises.readFile(prefsPath, "utf-8"));
   } catch {
     return false;
   }
+  const record = prefs?.extensions?.settings?.[playwrightExtensionId];
+  return !!record && typeof record === "object" && Object.keys(record).length > 0;
 }
 async function pathExists(p) {
   try {
@@ -72,6 +104,8 @@ async function pathExists(p) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  findPlaywrightExtensionProfile,
+  isExtensionInstalledInProfile,
   isPlaywrightExtensionInstalled,
   playwrightExtensionId,
   playwrightExtensionInstallUrl

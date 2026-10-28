@@ -70,7 +70,7 @@ function minimist(args, opts) {
       } else {
         setArg(key, strings[key] ? "" : true);
       }
-    } else if (/^-[^-]+/.test(arg)) {
+    } else if (/^-[A-Za-z]/.test(arg)) {
       const letters = arg.slice(1, -1).split("");
       let broken = false;
       for (let j = 0; j < letters.length; j++) {

@@ -3,69 +3,40 @@
   "browsers": [
     {
       "name": "chromium",
-      "revision": "1228",
+      "revision": "1248",
       "installByDefault": true,
-      "browserVersion": "149.0.7827.55",
+      "browserVersion": "156.0.8078.4",
       "title": "Chrome for Testing"
     },
     {
       "name": "chromium-headless-shell",
-      "revision": "1228",
+      "revision": "1248",
       "installByDefault": true,
-      "browserVersion": "149.0.7827.55",
+      "browserVersion": "156.0.8078.4",
       "title": "Chrome Headless Shell"
     },
     {
-      "name": "chromium-tip-of-tree",
-      "revision": "1432",
-      "installByDefault": false,
-      "browserVersion": "151.0.7886.0",
-      "title": "Chrome Canary for Testing"
-    },
-    {
-      "name": "chromium-tip-of-tree-headless-shell",
-      "revision": "1432",
-      "installByDefault": false,
-      "browserVersion": "151.0.7886.0",
-      "title": "Chrome Canary Headless Shell"
-    },
-    {
       "name": "firefox",
-      "revision": "1532",
+      "revision": "1555",
       "installByDefault": true,
-      "browserVersion": "151.0",
+      "browserVersion": "157.0",
       "title": "Firefox"
     },
     {
-      "name": "firefox-beta",
-      "revision": "1526",
-      "installByDefault": false,
-      "browserVersion": "152.0b1",
-      "title": "Firefox Beta"
-    },
-    {
       "name": "webkit",
-      "revision": "2311",
+      "revision": "2370",
       "installByDefault": true,
       "revisionOverrides": {
         "mac14": "2251",
-        "mac14-arm64": "2251",
-        "debian11-x64": "2105",
-        "debian11-arm64": "2105",
-        "ubuntu20.04-x64": "2092",
-        "ubuntu20.04-arm64": "2092"
+        "mac14-arm64": "2251"
       },
-      "browserVersion": "26.5",
+      "browserVersion": "27.2",
       "title": "WebKit"
     },
     {
       "name": "ffmpeg",
-      "revision": "1011",
-      "installByDefault": true,
-      "revisionOverrides": {
-        "mac12": "1010",
-        "mac12-arm64": "1010"
-      }
+      "revision": "1013",
+      "installByDefault": true
     },
     {
       "name": "winldd",

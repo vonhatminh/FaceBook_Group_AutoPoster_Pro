@@ -130,6 +130,10 @@ to start the browser session.`);
     ];
     if (cliArgs.headed)
       args.push("--headed");
+    if (cliArgs.mobile)
+      args.push("--mobile");
+    if (cliArgs.device)
+      args.push(`--device=${cliArgs.device}`);
     if (cliArgs.browser)
       args.push(`--browser=${cliArgs.browser}`);
     if (cliArgs.persistent)
@@ -138,6 +142,8 @@ to start the browser session.`);
       args.push(`--profile=${cliArgs.profile}`);
     if (cliArgs.config)
       args.push(`--config=${cliArgs.config}`);
+    if (cliArgs["idle-timeout"] !== void 0)
+      args.push(`--idle-timeout=${cliArgs["idle-timeout"]}`);
     if (cliArgs.extension)
       args.push("--extension");
     else if (cliArgs.cdp)
@@ -147,8 +153,9 @@ to start the browser session.`);
     const child = (0, import_child_process.spawn)(process.execPath, args, {
       detached: true,
       stdio: ["ignore", "pipe", err],
-      cwd: process.cwd()
+      cwd: process.cwd(),
       // Will be used as root.
+      windowsHide: true
     });
     let signalled = false;
     const sigintHandler = () => {

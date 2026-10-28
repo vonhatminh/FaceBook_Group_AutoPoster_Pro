@@ -43,6 +43,7 @@ var import_session = require("./session");
 var import_package = require("../../package");
 var import_serverRegistry = require("../../serverRegistry");
 var import_minimist = require("./minimist");
+var import_bootstrap = require("../../bootstrap");
 const globalOptions = [
   "json",
   "raw",
@@ -50,6 +51,7 @@ const globalOptions = [
 ];
 const booleanOptions = [
   "all",
+  "g",
   "help",
   "json",
   "raw",
@@ -65,11 +67,15 @@ async function program(options) {
     args.session = args.s;
     delete args.s;
   }
+  if (args.g) {
+    args.global = true;
+    delete args.g;
+  }
   const output = args.json ? new import_output.JsonOutput() : new import_output.TextOutput();
   const commandName = args._?.[0];
   if (args.version || args.v) {
     output.version(options?.embedderVersion ?? clientInfo.version);
-    process.exit(0);
+    (0, import_bootstrap.processExit)(0);
   }
   const command = commandName && help.commands[commandName];
   if (args.help || args.h || !commandName) {
@@ -78,11 +84,11 @@ async function program(options) {
     } else {
       const lines = ["playwright-cli - run playwright mcp commands from terminal"];
       if (process.env.CLAUDECODE || process.env.COPILOT_CLI)
-        lines.push(`Agent skill: ${import_path.default.relative(process.cwd(), (0, import_package.libPath)("tools", "cli-client", "skill", "SKILL.md"))}`);
+        lines.push(`Agent skill: ${import_path.default.relative(process.cwd(), (0, import_package.libPath)("tools", "skills", "playwright-cli", "SKILL.md"))}`);
       lines.push(help.global);
       output.help(lines.join("\n\n"));
     }
-    process.exit(0);
+    (0, import_bootstrap.processExit)(0);
   }
   if (!command)
     output.errorUnknownCommand(commandName, help.global);
@@ -168,6 +174,8 @@ async function program(options) {
       return;
     }
     case "install":
+      if (args.global && !args.skills)
+        output.errorInstallGlobalRequiresSkills();
       await runInitWorkspace(args, output);
       output.installed();
       return;
@@ -206,7 +214,8 @@ async function program(options) {
       const foreground = args.port !== void 0;
       const child = (0, import_child_process.spawn)(process.execPath, daemonArgs, {
         detached: !foreground,
-        stdio: foreground ? "inherit" : ["pipe", "pipe", "ignore"]
+        stdio: foreground ? "inherit" : ["pipe", "pipe", "ignore"],
+        windowsHide: true
       });
       if (foreground) {
         await new Promise((resolve) => child.on("exit", () => resolve()));
@@ -260,6 +269,8 @@ async function runInSession(entry, clientInfo, args, output) {
     delete args[globalOption];
   const session = new import_session.Session(entry);
   const result = await session.run(clientInfo, args, { raw, json: output.json });
+  if (result.isError)
+    process.exitCode = 1;
   return result.text;
 }
 async function runInSessionOrStop(entry, clientInfo, args, output) {
@@ -273,7 +284,11 @@ async function runInSessionOrStop(entry, clientInfo, args, output) {
 }
 async function runInitWorkspace(args, output) {
   const cliPath = (0, import_package.libPath)("entry", "cliDaemon.js");
-  const daemonArgs = [cliPath, "--init-workspace", ...args.skills ? ["--init-skills", String(args.skills)] : []];
+  const daemonArgs = [
+    cliPath,
+    "--init-workspace",
+    ...args.skills ? [args.global ? "--init-skills-global" : "--init-skills", String(args.skills)] : []
+  ];
   await new Promise((resolve, reject) => {
     const child = (0, import_child_process.spawn)(process.execPath, daemonArgs, {
       stdio: output.installStdio(),
@@ -381,15 +396,18 @@ function validateFlags(args, command, output) {
       continue;
     if (globalOptions.includes(key))
       continue;
-    if (!(key in command.flags))
-      unknownFlags.push(key);
+    if (key in command.flags)
+      continue;
+    if (args[key] === false && `no-${key}` in command.flags)
+      continue;
+    unknownFlags.push(key);
   }
   if (unknownFlags.length)
     output.errorUnknownOption(unknownFlags, command.help);
 }
 function validateArgs(args, command, output) {
   const positional = args._.slice(1);
-  if (positional.length > command.args.length)
+  if (positional.length > command.args.length && !command.variadicArg)
     output.errorTooManyArguments(command.args.length, positional.length, command.help);
 }
 function calculateSha1(buffer) {
